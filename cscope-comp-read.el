@@ -1,5 +1,6 @@
-(require 'projectile)
-(require 'pulse)
+;; Dependencies
+;; - project.el (part of Emacs)
+;; - pulse.el (part of Emacs)
 
 (defgroup cscope-comp-read nil
   "Cscope with the interface of ivy."
@@ -37,7 +38,8 @@ The index will be fed to the option \"-Lnum\"."
 (defun cscope-comp-read--get-root-dir ()
   "Returns project root dir if a project is detected,
 or `default-directory' otherwise."
-  (or (projectile-project-root) default-directory))
+  (let ((proj (project-current t)))
+    (nth 0 (project-roots proj))))
 
 (defun cscope-comp-read--do-search (menu query)
   "Search QUERY in MENU.
