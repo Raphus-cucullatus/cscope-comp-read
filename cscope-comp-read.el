@@ -110,17 +110,24 @@ Returns nil if error."
     (when ent
       (cscope-comp-read--jump-to 'find-file (nth 0 ent) (nth 2 ent)))))
 
+(defun cscope-comp-read--select-result (result fast-select)
+  (let ((col (split-string result "\n" t)))
+    (if (and fast-select (= (length col) 1))
+	(cscope-comp-read--select-entry (car col))
+      (cscope-comp-read--select-entry
+       (completing-read "Result: " col nil t)))))
 
-(defun cscope-comp-read--find (menu query &optional disable-fast-select)
+(defun cscope-comp-read--find (menu query fast-select)
   (let ((result (cscope-comp-read--do-search menu query)))
     (if (not result)
 	(message "Error, see buffer *cscope-comp-read error*")
-      (let ((col (split-string result "\n" t)))
-	(if (and (not disable-fast-select) (= (length col) 1))
-	    (cscope-comp-read--select-entry (car col))
-	  (cscope-comp-read--select-entry 
-	   (completing-read "Result: " col nil t)))))))
+      (cscope-comp-read--select-result result fast-select))))
 
+(defun cscope-comp-read--find-at-point (menu fast-select)
+  (let ((query (symbol-name (symbol-at-point))))
+    (if (string-empty-p query)
+	(message "No symbol at point")
+      (cscope-comp-read--find menu query fast-select))))
 
 ;;;###autoload
 (defun cscope-comp-read-pop-mark ()
@@ -135,58 +142,94 @@ Returns nil if error."
       (cscope-comp-read--pulse-momentarily))))
 
 ;;;###autoload
-(defun cscope-comp-read-find-symbol (query)
-  (interactive "sFind symbol: ")
-  (cscope-comp-read--find 'symbol query t))
+(defun cscope-comp-read-find-symbol (&optional prefix)
+  "Find symbol using cscope.
+When PREFIX, find the symbol at point.
+Without PREFIX, prompt for the cscope query."
+  (interactive "P")
+  (if prefix
+      (cscope-comp-read--find-at-point 'symbol t)
+    (cscope-comp-read--find 'symbol (read-string "Find symbol: ") t)))
 
 ;;;###autoload
-(defun cscope-comp-read-find-definition (query)
-  (interactive "sFind definition: ")
-  (cscope-comp-read--find 'definition query t))
+(defun cscope-comp-read-find-definition (&optional prefix)
+  "Find definition using cscope.
+When PREFIX, find the symbol at point.
+Without PREFIX, prompt for the cscope query."
+  (interactive "P")
+  (if prefix
+      (cscope-comp-read--find-at-point 'definition t)
+    (cscope-comp-read--find 'definition (read-string "Find definition: ") t)))
 
 ;;;###autoload
-(defun cscope-comp-read-find-definition-at-point ()
-  "Find definition of the symbol at point."
-  (interactive)
-  (let ((sym (symbol-name (symbol-at-point))))
-    (if (string-empty-p sym)
-	(message "No symbol at point")
-      (cscope-comp-read--find 'definition sym nil))))
+(defun cscope-comp-read-find-callee (&optional prefix)
+  "Find callee using cscope.
+When PREFIX, find the symbol at point.
+Without PREFIX, prompt for the cscope query."
+  (interactive "P")
+  (if prefix
+      (cscope-comp-read--find-at-point 'callee t)
+    (cscope-comp-read--find 'callee (read-string "Find callee of: ") t)))
 
 ;;;###autoload
-(defun cscope-comp-read-find-callee (query)
-  (interactive "sFind callee of: ")
-  (cscope-comp-read--find 'callee query t))
+(defun cscope-comp-read-find-caller (&optional prefix)
+  "Find caller using cscope.
+When PREFIX, find the symbol at point.
+Without PREFIX, prompt for the cscope query."
+  (interactive "P")
+  (if prefix
+      (cscope-comp-read--find-at-point 'caller t)
+    (cscope-comp-read--find 'caller (read-string "Find caller of: ") t)))
 
 ;;;###autoload
-(defun cscope-comp-read-find-caller (query)
-  (interactive "sFind caller of: ")
-  (cscope-comp-read--find 'caller query t))
+(defun cscope-comp-read-find-text (&optional prefix)
+  "Find text using cscope.
+When PREFIX, find the symbol at point.
+Without PREFIX, prompt for the cscope query."
+  (interactive "P")
+  (if prefix
+      (cscope-comp-read--find-at-point 'text t)
+    (cscope-comp-read--find 'text (read-string "Search text: ") t)))
 
 ;;;###autoload
-(defun cscope-comp-read-find-text (query)
-  (interactive "sSearch text: ")
-  (cscope-comp-read--find 'text query t))
+(defun cscope-comp-read-find-pattern (&optional prefix)
+  "Find pattern using cscope.
+When PREFIX, find the symbol at point.
+Without PREFIX, prompt for the cscope query."
+  (interactive "P")
+  (if prefix
+      (cscope-comp-read--find-at-point 'pattern t)
+    (cscope-comp-read--find 'pattern (read-string "Search for pattern: ") t)))
 
 ;;;###autoload
-(defun cscope-comp-read-find-pattern (query)
-  (interactive "sSearch for pattern: ")
-  (cscope-comp-read--find 'pattern query t))
+(defun cscope-comp-read-find-file (&optional prefix)
+  "Find file using cscope.
+When PREFIX, find the symbol at point.
+Without PREFIX, prompt for the cscope query."
+  (interactive "P")
+  (if prefix
+      (cscope-comp-read--find-at-point 'file t)
+    (cscope-comp-read--find 'file (read-string "Find file: ") t)))
 
 ;;;###autoload
-(defun cscope-comp-read-find-file (query)
-  (interactive "sFind file: ")
-  (cscope-comp-read--find 'file query t))
+(defun cscope-comp-read-find-includer (&optional prefix)
+  "Find includer using cscope.
+When PREFIX, find the symbol at point.
+Without PREFIX, prompt for the cscope query."
+  (interactive "P")
+  (if prefix
+      (cscope-comp-read--find-at-point 'includer t)
+    (cscope-comp-read--find 'includer (read-string "Find files including: ") t)))
 
 ;;;###autoload
-(defun cscope-comp-read-find-includer (query)
-  (interactive "sFind files including: ")
-  (cscope-comp-read--find 'includer query t))
-
-;;;###autoload
-(defun cscope-comp-read-find-assignment (query)
-  (interactive "sFind assignment: ")
-  (cscope-comp-read--find 'assignment query t))
+(defun cscope-comp-read-find-assignment (&optional prefix)
+  "Find assignment using cscope.
+When PREFIX, find the symbol at point.
+Without PREFIX, prompt for the cscope query."
+  (interactive "P")
+  (if prefix
+      (cscope-comp-read--find-at-point 'assignment t)
+    (cscope-comp-read--find 'assignment (read-string "Find assignment: ") t)))
 
 ;;;###autoload
 (defvar cscope-comp-read-command-map
