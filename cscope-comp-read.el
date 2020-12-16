@@ -25,7 +25,9 @@ The index will be fed to the option \"-Lnum\"."
   :type 'string)
 
 (defcustom cscope-comp-read-option-extra '("-k" "-q")
-  "Extra options when running cscope."
+  "Extra options when running cscope.  For example, use \"-d\"
+additionally to disable the auto-rebuild to keep the query time
+low especially for large projects."
   :type '(repeat string))
 
 (defcustom cscope-comp-read-marker-ring-length 10
