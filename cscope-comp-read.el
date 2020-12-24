@@ -1,5 +1,5 @@
 ;; Dependencies
-;; - project.el (part of Emacs)
+;; - projectile.el (for discovering project root)
 ;; - pulse.el (part of Emacs)
 
 (defgroup cscope-comp-read nil
@@ -40,8 +40,7 @@ low especially for large projects."
 (defun cscope-comp-read--get-root-dir ()
   "Returns project root dir if a project is detected,
 or `default-directory' otherwise."
-  (let ((proj (project-current t)))
-    (nth 0 (project-roots proj))))
+  (projectile-project-root))
 
 (defun cscope-comp-read--do-search (menu query)
   "Search QUERY in MENU.
