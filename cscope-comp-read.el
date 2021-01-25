@@ -140,7 +140,7 @@ See `cscope-comp-read-menu-alist' for possible menu items."
     (if (and fast-select (= (length candidates) 1))
 	(cscope-comp-read--select-entry (car candidates))
       (cscope-comp-read--select-entry
-       (completing-read "Result: " candidates nil t)))))
+       (completing-read "Result: " candidates nil t nil t)))))
 
 (defun cscope-comp-read--find (menu query fast-select)
   (let ((result (cscope-comp-read--do-search menu query)))
