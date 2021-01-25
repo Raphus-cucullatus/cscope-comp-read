@@ -25,7 +25,9 @@ The index will be fed to the option \"-Lnum\"."
   :type 'string)
 
 (defcustom cscope-comp-read-option-extra '("-k" "-q")
-  "Extra options when running cscope.  For example, use \"-d\"
+  "Extra options when running cscope.
+
+For example, use \"-d\"
 additionally to disable the auto-rebuild to keep the query time
 low especially for large projects."
   :type '(repeat string))
@@ -33,6 +35,23 @@ low especially for large projects."
 (defcustom cscope-comp-read-marker-ring-length 10
   "The length of the jumping history."
   :type 'integer)
+
+(defcustom cscope-comp-read-candidate-face-path nil
+  "Face of file path when displaying candidates."
+  :type 'face)
+
+(defcustom cscope-comp-read-candidate-face-lnum nil
+  "Face of line number when displaying candidates."
+  :type 'face)
+
+(defcustom cscope-comp-read-candidate-face-func
+  'font-lock-function-name-face
+  "Face of function name when displaying candidates."
+  :type 'face)
+
+(defcustom cscope-comp-read-candidate-face-line nil
+  "Face of full line when displaying candidates."
+  :type 'face)
 
 (defvar cscope-comp-read-marker-ring
   (make-ring cscope-comp-read-marker-ring-length))
@@ -62,27 +81,26 @@ See `cscope-comp-read-menu-alist' for possible menu items."
 			  (point-min) (point-max))
 	nil))))
 
-(defun cscope-comp-read--parse-cscope-entry (entry)
-  "Parse an entry of newline-split cscope output into a list of
+(defun cscope-comp-read--list-to-candidate (l)
+  (string-join l " "))
+(defun cscope-comp-read--candidate-to-list (cand)
+  (split-string cand " " t))
 
-    file path, function name, line number, line content.
-
-Returns nil if error."
+(defun cscope-comp-read--propertize (entry)
+  "Propertize an entry of newline-split cscope output."
   (if (string-match
        "^\\([^ \t]+\\)[ \t]+\\([^ \t]+\\)[ \t]+\\([0-9]+\\)[ \t]+\\(.*\\)"
        entry)
       (let ((path (substring entry (match-beginning 1) (match-end 1)))
-	    (func (substring entry (match-beginning 2) (match-end 2)))
 	    (lnum (substring entry (match-beginning 3) (match-end 3)))
+	    (func (substring entry (match-beginning 2) (match-end 2)))
 	    (line (substring entry (match-beginning 4) (match-end 4))))
-	(list
-	 (if (file-name-absolute-p path)
-	     (concat (file-remote-p default-directory) path)
-	   (concat (cscope-comp-read--get-root-dir) path))
-	 func
-	 (string-to-number lnum)
-	 line))
-    nil))
+	(cscope-comp-read--list-to-candidate
+	 (list
+	  (propertize path 'face cscope-comp-read-candidate-face-path)
+	  (propertize lnum 'face cscope-comp-read-candidate-face-lnum)
+	  (propertize func 'face cscope-comp-read-candidate-face-func)
+	  (propertize line 'face cscope-comp-read-candidate-face-line))))))
 
 (defun cscope-comp-read--mark-current-position ()
   "Push current position into `cscope-comp-read-marker-ring'."
@@ -107,16 +125,22 @@ Returns nil if error."
   (cscope-comp-read--pulse-momentarily))
 
 (defun cscope-comp-read--select-entry (entry)
-  (let ((ent (cscope-comp-read--parse-cscope-entry entry)))
-    (when ent
-      (cscope-comp-read--jump-to 'find-file (nth 0 ent) (nth 2 ent)))))
+  (let* ((l (cscope-comp-read--candidate-to-list entry))
+	 (path (nth 0 l))
+	 (fullpath (if (file-name-absolute-p path)
+		       (concat (file-remote-p default-directory) path)
+		     (concat (cscope-comp-read--get-root-dir) path)))
+	 (lnum (string-to-number (nth 1 l))))
+    (cscope-comp-read--jump-to 'find-file fullpath lnum)))
 
 (defun cscope-comp-read--select-result (result fast-select)
-  (let ((col (split-string result "\n" t)))
-    (if (and fast-select (= (length col) 1))
-	(cscope-comp-read--select-entry (car col))
+  (let ((candidates (mapcar
+		     'cscope-comp-read--propertize
+		     (split-string result "\n" t))))
+    (if (and fast-select (= (length candidates) 1))
+	(cscope-comp-read--select-entry (car candidates))
       (cscope-comp-read--select-entry
-       (completing-read "Result: " col nil t)))))
+       (completing-read "Result: " candidates nil t)))))
 
 (defun cscope-comp-read--find (menu query fast-select)
   (let ((result (cscope-comp-read--do-search menu query)))
