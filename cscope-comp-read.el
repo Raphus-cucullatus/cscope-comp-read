@@ -33,7 +33,18 @@ low especially for large projects."
   :type '(repeat string))
 
 (defcustom cscope-comp-read-marker-ring-length 10
-  "The length of the jumping history."
+  "The length of the jumping history.
+
+The `cscope-comp-read-marker-ring' is used for jumpping
+backwards."
+  :type 'integer)
+
+(defcustom cscope-comp-read-input-ring-length 30
+  "The length of the user input (including the implicit
+symbol-at-point) history.
+
+The `cscope-comp-read-input-ring' is used for user-input
+candidates"
   :type 'integer)
 
 (defcustom cscope-comp-read-candidate-face-path nil
@@ -55,6 +66,9 @@ low especially for large projects."
 
 (defvar cscope-comp-read-marker-ring
   (make-ring cscope-comp-read-marker-ring-length))
+
+(defvar cscope-comp-read-input-ring
+  (make-ring cscope-comp-read-input-ring-length))
 
 (defun cscope-comp-read--get-root-dir ()
   "Returns project root dir if a project is detected,
@@ -144,6 +158,7 @@ See `cscope-comp-read-menu-alist' for possible menu items."
 
 (defun cscope-comp-read--find (menu query fast-select)
   (let ((result (cscope-comp-read--do-search menu query)))
+    (ring-insert cscope-comp-read-input-ring query)
     (if (not result)
 	(message "Error, see buffer *cscope-comp-read error*")
       (cscope-comp-read--select-result result fast-select))))
@@ -166,6 +181,9 @@ See `cscope-comp-read-menu-alist' for possible menu items."
       (goto-char pos)
       (cscope-comp-read--pulse-momentarily))))
 
+(defun cscope-comp-read--read-input (prompt)
+  (completing-read prompt (ring-elements cscope-comp-read-input-ring)))
+
 ;;;###autoload
 (defun cscope-comp-read-find-symbol (&optional prefix)
   "Find symbol using cscope.
@@ -173,7 +191,7 @@ Without PREFIX, find the symbol at point.
 When PREFIX, prompt for the cscope query."
   (interactive "P")
   (if prefix
-      (cscope-comp-read--find 'symbol (read-string "Find symbol: ") t)
+      (cscope-comp-read--find 'symbol (cscope-comp-read--read-input "Find symbol: ") t)
     (cscope-comp-read--find-at-point 'symbol t)))
 
 ;;;###autoload
@@ -183,7 +201,7 @@ Without PREFIX, find the symbol at point.
 When PREFIX, prompt for the cscope query."
   (interactive "P")
   (if prefix
-      (cscope-comp-read--find 'definition (read-string "Find definition: ") t)
+      (cscope-comp-read--find 'definition (cscope-comp-read--read-input "Find definition: ") t)
     (cscope-comp-read--find-at-point 'definition t)))
 
 ;;;###autoload
@@ -193,7 +211,7 @@ Without PREFIX, find the symbol at point.
 When PREFIX, prompt for the cscope query."
   (interactive "P")
   (if prefix
-      (cscope-comp-read--find 'callee (read-string "Find callee of: ") t)
+      (cscope-comp-read--find 'callee (cscope-comp-read--read-input "Find callee of: ") t)
     (cscope-comp-read--find-at-point 'callee t)))
 
 ;;;###autoload
@@ -203,7 +221,7 @@ Without PREFIX, find the symbol at point.
 When PREFIX, prompt for the cscope query."
   (interactive "P")
   (if prefix
-      (cscope-comp-read--find 'caller (read-string "Find caller of: ") t)
+      (cscope-comp-read--find 'caller (cscope-comp-read--read-input "Find caller of: ") t)
     (cscope-comp-read--find-at-point 'caller t)))
 
 ;;;###autoload
@@ -213,7 +231,7 @@ Without PREFIX, find the symbol at point.
 When PREFIX, prompt for the cscope query."
   (interactive "P")
   (if prefix
-      (cscope-comp-read--find 'text (read-string "Search text: ") t)
+      (cscope-comp-read--find 'text (cscope-comp-read--read-input "Search text: ") t)
     (cscope-comp-read--find-at-point 'text t)))
 
 ;;;###autoload
@@ -223,7 +241,7 @@ Without PREFIX, find the symbol at point.
 When PREFIX, prompt for the cscope query."
   (interactive "P")
   (if prefix
-      (cscope-comp-read--find 'pattern (read-string "Search for pattern: ") t)
+      (cscope-comp-read--find 'pattern (cscope-comp-read--read-input "Search for pattern: ") t)
     (cscope-comp-read--find-at-point 'pattern t)))
 
 ;;;###autoload
@@ -233,7 +251,7 @@ Without PREFIX, find the symbol at point.
 When PREFIX, prompt for the cscope query."
   (interactive "P")
   (if prefix
-      (cscope-comp-read--find 'file (read-string "Find file: ") t)
+      (cscope-comp-read--find 'file (cscope-comp-read--read-input "Find file: ") t)
     (cscope-comp-read--find-at-point 'file t)))
 
 ;;;###autoload
@@ -243,7 +261,7 @@ Without PREFIX, find the symbol at point.
 When PREFIX, prompt for the cscope query."
   (interactive "P")
   (if prefix
-      (cscope-comp-read--find 'includer (read-string "Find files including: ") t)
+      (cscope-comp-read--find 'includer (cscope-comp-read--read-input "Find files including: ") t)
     (cscope-comp-read--find-at-point 'includer t)))
 
 ;;;###autoload
@@ -253,7 +271,7 @@ Without PREFIX, find the symbol at point.
 When PREFIX, prompt for the cscope query."
   (interactive "P")
   (if prefix
-      (cscope-comp-read--find 'assignment (read-string "Find assignment: ") t)
+      (cscope-comp-read--find 'assignment (cscope-comp-read--read-input "Find assignment: ") t)
     (cscope-comp-read--find-at-point 'assignment t)))
 
 ;;;###autoload
