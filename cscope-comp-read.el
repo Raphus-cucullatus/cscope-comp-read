@@ -65,15 +65,52 @@ candidates"
   :type 'face)
 
 (defvar cscope-comp-read-marker-ring
-  (make-ring cscope-comp-read-marker-ring-length))
+  (make-hash-table :test 'equal :weakness nil))
 
 (defvar cscope-comp-read-input-ring
-  (make-ring cscope-comp-read-input-ring-length))
+  (make-hash-table :test 'equal :weakness nil))
 
 (defun cscope-comp-read--get-root-dir ()
   "Returns project root dir if a project is detected,
 or `default-directory' otherwise."
   (projectile-project-root))
+
+(defun cscope-comp-read--ring-insert (ele ring ring-len &optional oldest)
+  "Insert ELE into current-project-specific RING."
+  (let ((proj (cscope-comp-read--get-root-dir)))
+    (when proj
+      (let ((proj-ring (gethash proj ring))
+	    (insert-func (if oldest 'ring-insert-at-beginning 'ring-insert)))
+	(setq proj-ring
+	      (or proj-ring
+		  (let ((new (make-ring ring-len)))
+		    (puthash proj new ring)
+		    new)))
+	(funcall insert-func proj-ring ele)))))
+
+(defun cscope-comp-read--ring-remove (ring)
+  "Pop an item from current-project-specific RING."
+  (let ((proj (cscope-comp-read--get-root-dir)))
+    (when proj
+      (let ((proj-ring (gethash proj ring)))
+	(when proj-ring
+	  (ring-remove proj-ring))))))
+
+(defun cscope-comp-read--ring-not-empty-p (ring)
+  "Return t if current-project-specific RING is not empty."
+  (let ((proj (cscope-comp-read--get-root-dir)))
+    (when proj
+      (let ((proj-ring (gethash proj ring)))
+	(when proj-ring
+	  (not (ring-empty-p proj-ring)))))))
+
+(defun cscope-comp-read--ring-elements (ring)
+  "Return a list of the elements of current-project-specific RING."
+  (let ((proj (cscope-comp-read--get-root-dir)))
+    (when proj
+      (let ((proj-ring (gethash proj ring)))
+	(when proj-ring
+	  (ring-elements proj-ring))))))
 
 (defun cscope-comp-read--do-search (menu query)
   "Search QUERY in MENU.
@@ -118,8 +155,10 @@ See `cscope-comp-read-menu-alist' for possible menu items."
 
 (defun cscope-comp-read--mark-current-position ()
   "Push current position into `cscope-comp-read-marker-ring'."
-  (ring-insert-at-beginning cscope-comp-read-marker-ring
-			    (cons (current-buffer) (point))))
+  (cscope-comp-read--ring-insert (cons (current-buffer) (point))
+				 cscope-comp-read-marker-ring
+				 cscope-comp-read-marker-ring-length
+				 'oldest))
 
 (defun cscope-comp-read--pulse-momentarily ()
   "Give a visual pulse on the current line"
@@ -158,7 +197,10 @@ See `cscope-comp-read-menu-alist' for possible menu items."
 
 (defun cscope-comp-read--find (menu query fast-select)
   (let ((result (cscope-comp-read--do-search menu query)))
-    (ring-insert cscope-comp-read-input-ring query)
+    (cscope-comp-read--ring-insert
+     query
+     cscope-comp-read-input-ring
+     cscope-comp-read-input-ring-length)
     (if (not result)
 	(message "Error, see buffer *cscope-comp-read error*")
       (cscope-comp-read--select-result result fast-select))))
@@ -173,8 +215,8 @@ See `cscope-comp-read-menu-alist' for possible menu items."
 (defun cscope-comp-read-pop-mark ()
   "Jump back to the location before the last cscope-comp-read jump."
   (interactive)
-  (when (not (ring-empty-p cscope-comp-read-marker-ring))
-    (let* ((m (ring-remove cscope-comp-read-marker-ring))
+  (when (cscope-comp-read--ring-not-empty-p cscope-comp-read-marker-ring)
+    (let* ((m (cscope-comp-read--ring-remove cscope-comp-read-marker-ring))
 	   (buf (car m))
 	   (pos (cdr m)))
       (switch-to-buffer buf)
@@ -182,7 +224,7 @@ See `cscope-comp-read-menu-alist' for possible menu items."
       (cscope-comp-read--pulse-momentarily))))
 
 (defun cscope-comp-read--read-input (prompt)
-  (completing-read prompt (ring-elements cscope-comp-read-input-ring)))
+  (completing-read prompt (cscope-comp-read--ring-elements cscope-comp-read-input-ring)))
 
 ;;;###autoload
 (defun cscope-comp-read-find-symbol (&optional prefix)
