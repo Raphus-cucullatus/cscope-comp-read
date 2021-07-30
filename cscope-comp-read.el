@@ -224,7 +224,8 @@ See `cscope-comp-read-menu-alist' for possible menu items."
       (cscope-comp-read--pulse-momentarily))))
 
 (defun cscope-comp-read--read-input (prompt)
-  (completing-read prompt (cscope-comp-read--ring-elements cscope-comp-read-input-ring)))
+  (let ((selectrum-should-sort nil))
+    (completing-read prompt (cscope-comp-read--ring-elements cscope-comp-read-input-ring))))
 
 ;;;###autoload
 (defun cscope-comp-read-find-symbol (&optional prefix)
