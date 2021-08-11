@@ -318,6 +318,19 @@ When PREFIX, prompt for the cscope query."
     (cscope-comp-read--find-at-point 'assignment t)))
 
 ;;;###autoload
+(defun cscope-comp-read-build (&optional prefix)
+  "Build cscope cross reference.
+The options given to cscope are \"-R -b -k -q\"."
+  (interactive "P")
+  (let ((opt (if prefix
+		 (read-string "cscope build database options: ")
+	       "-Rbkq"))
+	(default-directory (cscope-comp-read--get-root-dir))
+	(async-shell-command-buffer 'new-buffer)
+	(display-buffer-alist '(("*Async Shell Command*" . (display-buffer-no-window)))))
+    (async-shell-command (format "%s %s" cscope-comp-read-program opt))))
+
+;;;###autoload
 (defvar cscope-comp-read-command-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "s") 'cscope-comp-read-find-symbol)
@@ -331,6 +344,7 @@ When PREFIX, prompt for the cscope query."
     (define-key map (kbd "f") 'cscope-comp-read-find-file)
     (define-key map (kbd "i") 'cscope-comp-read-find-includer)
     (define-key map (kbd "=") 'cscope-comp-read-find-assignment)
+    (define-key map (kbd "r") 'cscope-comp-read-build)
     map)
   "Keymap for cscope-comp-read command.")
 
