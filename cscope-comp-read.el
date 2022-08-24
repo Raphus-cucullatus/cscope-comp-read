@@ -1,5 +1,5 @@
 ;; Dependencies
-;; - project.el (for discovering project root)
+;; - projectile (fallback to Emacs' project.el if unavailable)
 ;; - pulse.el (part of Emacs)
 
 (defgroup cscope-comp-read nil
@@ -73,7 +73,9 @@ candidates"
 (defun cscope-comp-read--get-root-dir ()
   "Returns project root dir if a project is detected,
 or `default-directory' otherwise."
-  (project-root (project-current t)))
+  (if (and (boundp 'projectile-mode) projectile-mode)
+      (projectile-project-root)
+    (project-root (project-current t))))
 
 (defun cscope-comp-read--ring-insert (ele ring ring-len &optional oldest)
   "Insert ELE into current-project-specific RING."
